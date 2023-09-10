@@ -85,7 +85,8 @@ class TrendPredictor:
         model.add(Embedding(self.vocab_size, self.embedding_dim))
         model.add(LSTM(self.lstm_units))
         model.add(Dense(1, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='binary_crossentropy',
+                      optimizer='adam', metrics=['accuracy'])
         model.fit(X_train, y_train, epochs=10, batch_size=32)
         self.model = model
 
