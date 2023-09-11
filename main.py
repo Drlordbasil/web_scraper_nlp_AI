@@ -2,11 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense
 import numpy as np
 
 from flask import Flask, render_template, request
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
 
 
 class GoogleSearch:
@@ -54,10 +54,7 @@ class TrendPredictor:
         self.model = None
 
     def preprocess_data(self, data):
-        tokenized_data = []
-        for text in data:
-            tokens = nltk.word_tokenize(text)
-            tokenized_data.append(tokens)
+        tokenized_data = [nltk.word_tokenize(text) for text in data]
         return tokenized_data
 
     def create_sequences(self, tokenized_data, sequence_length):
@@ -71,12 +68,8 @@ class TrendPredictor:
     def vectorize_sequences(self, sequences):
         sequence_vectors = []
         for sequence in sequences:
-            sequence_vector = []
-            for word in sequence:
-                if word in self.word_index and self.word_index[word] < self.vocab_size:
-                    sequence_vector.append(self.word_index[word])
-                else:
-                    sequence_vector.append(0)
+            sequence_vector = [self.word_index.get(word, 0) if self.word_index.get(
+                word, 0) < self.vocab_size else 0 for word in sequence]
             sequence_vectors.append(sequence_vector)
         return sequence_vectors
 
@@ -110,10 +103,11 @@ class Dashboard:
         sequence_length = 20  # Set the desired sequence length
         word_index = {}  # Provide the word_index dictionary where words are keys and their indices are values
         vocab_size = len(word_index)
-        sequence = TrendPredictor().preprocess_data([text])
-        sequence_vectors = TrendPredictor().vectorize_sequences(sequence)
+        model = TrendPredictor(vocab_size, word_index, 100, 128)
+        sequence = model.preprocess_data([text])
+        sequence_vectors = model.vectorize_sequences(sequence)
 
-        prediction = TrendPredictor().model.predict(sequence_vectors)
+        prediction = model.model.predict(sequence_vectors)
         return render_template('trend_prediction.html', prediction=prediction)
 
 
@@ -131,12 +125,10 @@ def main():
     vocab_size = len(word_index)
     y_train = np.array([])  # Provide the corresponding labels for training
 
-    embedding_dim = 100  # Set the desired embedding dimension
-    lstm_units = 128  # Set the desired number of LSTM units
-
+    sequence_length = 20  # Set the desired sequence length
     sequences = TrendPredictor().create_sequences(tokenized_data, sequence_length)
     X_train = TrendPredictor().vectorize_sequences(sequences)
-    model = TrendPredictor(vocab_size, word_index, embedding_dim, lstm_units)
+    model = TrendPredictor(vocab_size, word_index, 100, 128)
     model.train_model(X_train, y_train)
 
     Dashboard.app.run(debug=True)
